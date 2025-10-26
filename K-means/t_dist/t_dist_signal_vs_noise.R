@@ -42,7 +42,6 @@ true_labels <- data_result$true_labels
 
 # 使用K-means进行聚类
 k <- 2  # 聚类数量
-set.seed(123)
 kmeans_result <- ClusterR::KMeans_arma(X, clusters = k, n_iter = 100, seed_mode = "random_subset", 
                                        verbose = FALSE, CENTROIDS = NULL, seed = 123)
 kmeans_labels <- ClusterR::predict_KMeans(X, kmeans_result)
@@ -137,16 +136,16 @@ combined_plot <- grid.arrange(plot_true_signal, plot_kmeans_signal,
 # 保存图像
 ggsave("t_dist_signal_vs_noise_comparison.png", combined_plot, width = 12, height = 12, dpi = 300)
 
-# 打印聚类结果统计
-cat("数据生成参数:\n")
-cat("样本数量 n =", n, "\n")
-cat("总特征数 p =", p, "\n")
-cat("信号特征数 p1 =", p1, "\n")
-cat("t分布自由度 df =", df_t, "\n")
-cat("真实标签分布:\n")
-print(table(true_labels))
-cat("\nK-means聚类结果:\n")
-print(table(kmeans_labels))
+# # 打印聚类结果统计
+# cat("数据生成参数:\n")
+# cat("样本数量 n =", n, "\n")
+# cat("总特征数 p =", p, "\n")
+# cat("信号特征数 p1 =", p1, "\n")
+# cat("t分布自由度 df =", df_t, "\n")
+# cat("真实标签分布:\n")
+# print(table(true_labels))
+# cat("\nK-means聚类结果:\n")
+# print(table(kmeans_labels))
 
 # 计算聚类质量指标
 if (length(unique(kmeans_labels)) > 1) {

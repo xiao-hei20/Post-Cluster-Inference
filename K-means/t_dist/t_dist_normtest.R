@@ -293,12 +293,12 @@ t_dist_DT_multi <- function(X, j, epi = 0.5){
 
 res_list<-list()
 seq_tim <- 1
-p1_seq     <- seq(from = 40, to = 40, length.out = seq_tim)
-p_seq      <- seq(from = 200, to = 200, length.out = seq_tim)
-n_seq      <- seq(from = 600, to = 600, length.out = seq_tim)
+p1_seq     <- seq(from = 80, to = 80, length.out = seq_tim)
+p_seq      <- seq(from = 400, to = 400, length.out = seq_tim)
+n_seq      <- seq(from =1000, to = 1000, length.out = seq_tim)
 mu_1_seq   <- seq(from = 0, to = 0, length.out = seq_tim)
-mu_2_seq   <- seq(from = 5, to = 5,length.out = seq_tim)
-sigma_1_seq <- seq(from = 16, to = 16, length.out = seq_tim)
+mu_2_seq   <- seq(from = 3, to = 3,length.out = seq_tim)
+sigma_1_seq <- seq(from = 1, to = 1, length.out = seq_tim)
 sigma_2_seq <- seq(from = 1, to = 1, length.out = seq_tim)
 rho_seq    <- seq(from = 0.2, to = 0.2, length.out = seq_tim)
 df_t_seq   <- seq(from = 8, to = 8, length.out = seq_tim)  # t分布自由度参数
@@ -326,12 +326,20 @@ for (i in 1:seq_tim) {
     assign(base_names[j], param_list[[param_names[j]]][i], envir = environment())
   }
   
+  # 保存当前随机数状态
+  old_seed <- .Random.seed
+  
+  # 使用固定种子选择信号维度（种子基于i，确保每次运行结果一致）
+  set.seed(12345 + 1)  # 固定种子，每次运行结果一致
   # 除了第p1+1维之外的所有维度
   available_dims <- setdiff(1:p, p1+1)
   # 从可用维度中随机选择p1个维度作为信号维度
   signal_dims <- sample(available_dims, size = p1, replace = FALSE)
   # 确保第p1+1维是噪声（不在信号维度中）
   noise_dims <- setdiff(1:p, signal_dims)
+  
+  # 恢复原来的随机数状态
+  .Random.seed <<- old_seed
   
   # 构建协方差矩阵
   Sigma=rho^abs(matrix(rep(1:p,each=p),p,p,byrow = F)-matrix(rep(1:p,each=p),p,p,byrow = T))
@@ -620,81 +628,4 @@ for (i in 1:seq_tim) {
   # 保存信号特征对比图
   ggsave("signal_feature_comparison.png", signal_comparison_plot, width = 16, height = 8, dpi = 300)
   cat("信号特征四种方法对比图已保存为 signal_feature_comparison.png\n")
-  
-  # 信号特征四种方法的正态性检验
-  cat("信号特征四种方法正态性检验:\n")
-  cat("PCI: p-value =", round(shapiro.test(signal_stats_PCI)$p.value, 4), "\n")
-  cat("CTT: p-value =", round(shapiro.test(signal_stats_CTT)$p.value, 4), "\n")
-  cat("SI: p-value =", round(shapiro.test(signal_stats_SI)$p.value, 4), "\n")
-  cat("DT: p-value =", round(shapiro.test(signal_stats_DT)$p.value, 4), "\n\n")
-  
-  # 噪声特征统计信息
-  cat("噪声特征统计量:\n")
-  cat("  均值 =", round(mean(noise_stats), 4), "\n")
-  cat("  标准差 =", round(sd(noise_stats), 4), "\n")
-  cat("  正态性检验 p-value =", round(shapiro.test(noise_stats)$p.value, 4), "\n")
-  
-  # 3. 正态性检验
-  cat("=== t_dist_PCI 正态性检验 ===\n")
-  cat("Shapiro-Wilk normality test:\n")
-  shapiro_test_PCI <- shapiro.test(result_PCI)
-  print(shapiro_test_PCI)
-  
-  cat("\nKolmogorov-Smirnov test:\n")
-  ks_test_PCI <- ks.test(result_PCI, "pnorm", mean = mean(result_PCI), sd = sd(result_PCI))
-  print(ks_test_PCI)
-  
-  cat("\n=== t_dist_CTT 正态性检验 ===\n")
-  cat("Shapiro-Wilk normality test:\n")
-  shapiro_test_CTT <- shapiro.test(result_CTT)
-  print(shapiro_test_CTT)
-  
-  cat("\nKolmogorov-Smirnov test:\n")
-  ks_test_CTT <- ks.test(result_CTT, "pnorm", mean = mean(result_CTT), sd = sd(result_CTT))
-  print(ks_test_CTT)
-  
-  cat("\n=== t_dist_SI 正态性检验 ===\n")
-  cat("Shapiro-Wilk normality test:\n")
-  shapiro_test_SI <- shapiro.test(result_SI)
-  print(shapiro_test_SI)
-  
-  cat("\nKolmogorov-Smirnov test:\n")
-  ks_test_SI <- ks.test(result_SI, "pnorm", mean = mean(result_SI), sd = sd(result_SI))
-  print(ks_test_SI)
-  
-  cat("\n=== t_dist_DT 正态性检验 ===\n")
-  cat("Shapiro-Wilk normality test:\n")
-  shapiro_test_DT <- shapiro.test(result_DT)
-  print(shapiro_test_DT)
-  
-  cat("\nKolmogorov-Smirnov test:\n")
-  ks_test_DT <- ks.test(result_DT, "pnorm", mean = mean(result_DT), sd = sd(result_DT))
-  print(ks_test_DT)
-  
-  # 4. 基本统计信息
-  cat("\n=== t_dist_PCI 基本统计信息 ===\n")
-  cat("Mean:", mean(result_PCI), "\n")
-  cat("SD:", sd(result_PCI), "\n")
-  cat("Skewness:", moments::skewness(result_PCI), "\n")
-  cat("Kurtosis:", moments::kurtosis(result_PCI), "\n")
-  
-  cat("\n=== t_dist_CTT 基本统计信息 ===\n")
-  cat("Mean:", mean(result_CTT), "\n")
-  cat("SD:", sd(result_CTT), "\n")
-  cat("Skewness:", moments::skewness(result_CTT), "\n")
-  cat("Kurtosis:", moments::kurtosis(result_CTT), "\n")
-  
-  cat("\n=== t_dist_SI 基本统计信息 ===\n")
-  cat("Mean:", mean(result_SI), "\n")
-  cat("SD:", sd(result_SI), "\n")
-  cat("Skewness:", moments::skewness(result_SI), "\n")
-  cat("Kurtosis:", moments::kurtosis(result_SI), "\n")
-  
-  cat("\n=== t_dist_DT 基本统计信息 ===\n")
-  cat("Mean:", mean(result_DT), "\n")
-  cat("SD:", sd(result_DT), "\n")
-  cat("Skewness:", moments::skewness(result_DT), "\n")
-  cat("Kurtosis:", moments::kurtosis(result_DT), "\n")
-  
-  # 注意：ggplot2不需要恢复图形参数
 }

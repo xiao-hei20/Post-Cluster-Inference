@@ -1,4 +1,5 @@
 library(class)
+library(cluster)
 library(doSNOW)
 library(gamlss.dist)
 library(MASS)
@@ -12,10 +13,9 @@ t_dist_CTT_hierarchical <- function(X, p1){
   # 保存当前随机种子状态
   old_seed <- .Random.seed
   
-  # 使用层次聚类替代K-means
-  dist_matrix <- dist(X)
-  hclust_result <- hclust(dist_matrix, method = "ward.D2")
-  clu <- cutree(hclust_result, k = 2)
+  # 使用DIANA分裂聚类替代K-means
+  diana_result <- diana(X)
+  clu <- cutree(diana_result, k = 2)
   
   # 恢复随机种子状态
   .Random.seed <<- old_seed
@@ -41,10 +41,9 @@ t_dist_DT_hierarchical <- function(X, p1, epi = 0.5){
   # 保存当前随机种子状态
   old_seed <- .Random.seed
   
-  # 使用层次聚类
-  dist_matrix <- dist(X)
-  hclust_result <- hclust(dist_matrix, method = "ward.D2")
-  clu <- cutree(hclust_result, k = 2)
+  # 使用DIANA分裂聚类
+  diana_result <- diana(X)
+  clu <- cutree(diana_result, k = 2)
   
   # 计算协方差矩阵
   sigma <- (var(X[clu==1,]) + var(X[clu==2,])) / 2
@@ -53,10 +52,9 @@ t_dist_DT_hierarchical <- function(X, p1, epi = 0.5){
   X_test <- mvrnorm(n = nrow(X), mu = rep(0, ncol(X)), Sigma = epi * (1 - epi) * sigma) + epi * X
   X_train <- X - X_test
   
-  # 对训练数据进行层次聚类
-  dist_matrix_train <- dist(X_train)
-  hclust_result_train <- hclust(dist_matrix_train, method = "ward.D2")
-  clu_train <- cutree(hclust_result_train, k = 2)
+  # 对训练数据进行DIANA分裂聚类
+  diana_result_train <- diana(X_train)
+  clu_train <- cutree(diana_result_train, k = 2)
   
   # 恢复随机种子状态
   .Random.seed <<- old_seed
@@ -121,13 +119,12 @@ t_dist_PCI_hierarchical <- function(X, p1, K = 2){
     # 保存当前随机种子状态
     old_seed <- .Random.seed
     
-    # 使用层次聚类替代K-means
-    dist_matrix <- dist(Xtrain)
-    hclust_result <- hclust(dist_matrix, method = "ward.D2")
+    # 使用DIANA分裂聚类替代K-means
+    diana_result <- diana(Xtrain)
     cluster_centers <- matrix(0, nrow = 2, ncol = ncol(Xtrain))
     
     # 计算聚类中心
-    clu_train <- cutree(hclust_result, k = 2)
+    clu_train <- cutree(diana_result, k = 2)
     for(i in 1:2) {
       if(sum(clu_train == i) > 0) {
         cluster_centers[i, ] <- colMeans(Xtrain[clu_train == i, , drop = FALSE])
@@ -195,13 +192,12 @@ t_dist_PCI_hierarchical_multi <- function(X, j, K = 2){
     # 保存当前随机种子状态
     old_seed <- .Random.seed
     
-    # 使用层次聚类替代K-means
-    dist_matrix <- dist(Xtrain)
-    hclust_result <- hclust(dist_matrix, method = "ward.D2")
+    # 使用DIANA分裂聚类替代K-means
+    diana_result <- diana(Xtrain)
     cluster_centers <- matrix(0, nrow = 2, ncol = ncol(Xtrain))
     
     # 计算聚类中心
-    clu_train <- cutree(hclust_result, k = 2)
+    clu_train <- cutree(diana_result, k = 2)
     for(i in 1:2) {
       if(sum(clu_train == i) > 0) {
         cluster_centers[i, ] <- colMeans(Xtrain[clu_train == i, , drop = FALSE])
@@ -251,10 +247,9 @@ t_dist_CTT_hierarchical_multi <- function(X, j){
   # 保存当前随机种子状态
   old_seed <- .Random.seed
   
-  # 使用层次聚类替代K-means
-  dist_matrix <- dist(X)
-  hclust_result <- hclust(dist_matrix, method = "ward.D2")
-  clu <- cutree(hclust_result, k = 2)
+  # 使用DIANA分裂聚类替代K-means
+  diana_result <- diana(X)
+  clu <- cutree(diana_result, k = 2)
   
   # 恢复随机种子状态
   .Random.seed <<- old_seed
@@ -279,10 +274,9 @@ t_dist_DT_hierarchical_multi <- function(X, j, epi = 0.5){
   # 保存当前随机种子状态
   old_seed <- .Random.seed
   
-  # 使用层次聚类替代K-means
-  dist_matrix <- dist(X)
-  hclust_result <- hclust(dist_matrix, method = "ward.D2")
-  clu <- cutree(hclust_result, k = 2)
+  # 使用DIANA分裂聚类替代K-means
+  diana_result <- diana(X)
+  clu <- cutree(diana_result, k = 2)
   
   # 恢复随机种子状态
   .Random.seed <<- old_seed
@@ -328,12 +322,12 @@ t_dist_DT_hierarchical_multi <- function(X, j, epi = 0.5){
 
 res_list<-list()
 seq_tim <- 1
-p1_seq     <- seq(from = 40, to = 40, length.out = seq_tim)
-p_seq      <- seq(from = 200, to = 200, length.out = seq_tim)
-n_seq      <- seq(from = 600, to = 600, length.out = seq_tim)
+p1_seq     <- seq(from = 80, to = 80, length.out = seq_tim)
+p_seq      <- seq(from = 400, to = 400, length.out = seq_tim)
+n_seq      <- seq(from = 1000, to = 1000, length.out = seq_tim)
 mu_1_seq   <- seq(from = 0, to = 0, length.out = seq_tim)
-mu_2_seq   <- seq(from = 5, to = 5,length.out = seq_tim)
-sigma_1_seq <- seq(from = 4, to = 4, length.out = seq_tim)
+mu_2_seq   <- seq(from = 3, to = 3,length.out = seq_tim)
+sigma_1_seq <- seq(from = 3, to = 3, length.out = seq_tim)
 sigma_2_seq <- seq(from = 1, to = 1, length.out = seq_tim)
 rho_seq    <- seq(from = 0.2, to = 0.2, length.out = seq_tim)
 df_t_seq   <- seq(from = 8, to = 8, length.out = seq_tim)  # t分布自由度参数
@@ -353,19 +347,27 @@ str(param_list)
 res_list<-list()
 
 for (i in 1:seq_tim) {
-  ran<-runif(1)*1000+0.58
+  ran<-runif(1)*1000+0.8
   param_names <- names(param_list)
   base_names <- sub("_seq$", "", param_names)
   for (j in seq_along(param_names)) {
     assign(base_names[j], param_list[[param_names[j]]][i], envir = environment())
   }
   
+  # 保存当前随机数状态
+  old_seed <- .Random.seed
+  
+  # 使用固定种子选择信号维度（种子基于i，确保每次运行结果一致）
+  set.seed(12345)  # 固定种子，每次运行结果一致
   # 除了第p1+1维之外的所有维度
   available_dims <- setdiff(1:p, p1+1)
   # 从可用维度中随机选择p1个维度作为信号维度
   signal_dims <- sample(available_dims, size = p1, replace = FALSE)
   # 确保第p1+1维是噪声（不在信号维度中）
   noise_dims <- setdiff(1:p, signal_dims)
+  
+  # 恢复原来的随机数状态
+  .Random.seed <<- old_seed
   
   # 构建协方差矩阵
   Sigma=rho^abs(matrix(rep(1:p,each=p),p,p,byrow = F)-matrix(rep(1:p,each=p),p,p,byrow = T))
@@ -613,68 +615,4 @@ for (i in 1:seq_tim) {
   # 保存信号特征对比图
   ggsave("signal_feature_hierarchical_comparison.png", signal_comparison_plot, width = 16, height = 8, dpi = 300)
   cat("信号特征三种层次聚类方法对比图已保存为 signal_feature_hierarchical_comparison.png\n")
-  
-  # 信号特征三种方法的正态性检验
-  cat("信号特征三种层次聚类方法正态性检验:\n")
-  cat("PCI_hierarchical: p-value =", round(shapiro.test(signal_stats_PCI)$p.value, 4), "\n")
-  cat("CTT_hierarchical: p-value =", round(shapiro.test(signal_stats_CTT)$p.value, 4), "\n")
-  cat("DT_hierarchical: p-value =", round(shapiro.test(signal_stats_DT)$p.value, 4), "\n\n")
-  
-  # 噪声特征统计信息
-  cat("噪声特征统计量:\n")
-  cat("  均值 =", round(mean(noise_stats), 4), "\n")
-  cat("  标准差 =", round(sd(noise_stats), 4), "\n")
-  cat("  正态性检验 p-value =", round(shapiro.test(noise_stats)$p.value, 4), "\n")
-  
-  # 3. 正态性检验
-  cat("=== t_dist_PCI_hierarchical 正态性检验 ===\n")
-  cat("Shapiro-Wilk normality test:\n")
-  shapiro_test_PCI <- shapiro.test(result_PCI)
-  print(shapiro_test_PCI)
-  
-  cat("\nKolmogorov-Smirnov test:\n")
-  ks_test_PCI <- ks.test(result_PCI, "pnorm", mean = mean(result_PCI), sd = sd(result_PCI))
-  print(ks_test_PCI)
-  
-  cat("\n=== t_dist_CTT_hierarchical 正态性检验 ===\n")
-  cat("Shapiro-Wilk normality test:\n")
-  shapiro_test_CTT <- shapiro.test(result_CTT)
-  print(shapiro_test_CTT)
-  
-  cat("\nKolmogorov-Smirnov test:\n")
-  ks_test_CTT <- ks.test(result_CTT, "pnorm", mean = mean(result_CTT), sd = sd(result_CTT))
-  print(ks_test_CTT)
-  
-  
-  cat("\n=== t_dist_DT_hierarchical 正态性检验 ===\n")
-  cat("Shapiro-Wilk normality test:\n")
-  shapiro_test_DT <- shapiro.test(result_DT)
-  print(shapiro_test_DT)
-  
-  cat("\nKolmogorov-Smirnov test:\n")
-  ks_test_DT <- ks.test(result_DT, "pnorm", mean = mean(result_DT), sd = sd(result_DT))
-  print(ks_test_DT)
-  
-  # 4. 基本统计信息
-  cat("\n=== t_dist_PCI_hierarchical 基本统计信息 ===\n")
-  cat("Mean:", mean(result_PCI), "\n")
-  cat("SD:", sd(result_PCI), "\n")
-  cat("Skewness:", moments::skewness(result_PCI), "\n")
-  cat("Kurtosis:", moments::kurtosis(result_PCI), "\n")
-  
-  cat("\n=== t_dist_CTT_hierarchical 基本统计信息 ===\n")
-  cat("Mean:", mean(result_CTT), "\n")
-  cat("SD:", sd(result_CTT), "\n")
-  cat("Skewness:", moments::skewness(result_CTT), "\n")
-  cat("Kurtosis:", moments::kurtosis(result_CTT), "\n")
-  
-  
-  
-  cat("\n=== t_dist_DT_hierarchical 基本统计信息 ===\n")
-  cat("Mean:", mean(result_DT), "\n")
-  cat("SD:", sd(result_DT), "\n")
-  cat("Skewness:", moments::skewness(result_DT), "\n")
-  cat("Kurtosis:", moments::kurtosis(result_DT), "\n")
-  
-  # 注意：ggplot2不需要恢复图形参数
 }
