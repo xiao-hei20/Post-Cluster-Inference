@@ -190,13 +190,13 @@ PCI_h <- function(X, p1, K = 2){
 }
 
 # 参数设置
-p1 = 20; p = 100; n = 400; mu_1 = 0; mu_2 = 0.5; rho = 0
+p1 = 80; p = 400; n = 800; mu_1 = 0; mu_2 = 3; rho = 0.2
 
 # 两种方差配置
-sigma_1_config1 = 3; sigma_2_config1 = 1  # 配置1：方差(3,1)
+sigma_1_config1 = 2; sigma_2_config1 = 1  # 配置1：方差(3,1)
 sigma_1_config2 = 1; sigma_2_config2 = 1  # 配置2：方差(1,1)
 
-n_repetitions <- 50
+n_repetitions <- 100
 
 # 存储所有结果 - 使用命名列表
 all_results <- list(
@@ -222,7 +222,7 @@ variance_vector <- rep(sigma_2, p)  # 默认所有特征使用sigma_2
 variance_vector[signal_dims] <- sigma_1  # 信号特征使用sigma_1
 Sigma <- sqrt(diag(variance_vector)) %*% Sigma %*% sqrt(diag(variance_vector))
 
-npor = 0.2
+npor = 0.5
 n1 = ceiling(n*npor)
 n0 = n - n1
 center0 = rep(mu_1, p)
@@ -240,9 +240,9 @@ result_norm_CTT_h_hetero <- numeric(n_repetitions)
 result_norm_DT_h_hetero <- numeric(n_repetitions)
 
 for(l in 1:n_repetitions) {
-  set.seed(l+31*1000)
-  X1 = t(t(2*matrix(rnorm(n1*p), n1, p) %*% chol(Sigma))+ center1)
-  X0 = t(t(2*matrix(rnorm(n0*p), n0, p) %*% chol(Sigma))+ center0) 
+  set.seed(l+35*1000)
+  X1 = t(t(matrix(rnorm(n1*p), n1, p) %*% chol(Sigma))+ center1)
+  X0 = t(t(matrix(rnorm(n0*p), n0, p) %*% chol(Sigma))+ center0) 
   X = rbind(X1, X0)
   
   result_norm_PCI_km_hetero[l] <- PCI_km(X, p1, K=4)
@@ -267,7 +267,7 @@ result_t_CTT_h_hetero <- numeric(n_repetitions)
 result_t_DT_h_hetero <- numeric(n_repetitions)
 
 for(l in 1:n_repetitions) {
-  set.seed(l+31*2000)
+  set.seed(l+35*2000)
   Sigma_sqrt <- chol(Sigma)
   X1 = matrix(rt(n1*p, df = df_t), n1, p)
   X0 = matrix(rt(n0*p, df = df_t), n0, p)
@@ -310,8 +310,8 @@ result_norm_DT_h_homo <- numeric(n_repetitions)
 
 for(l in 1:n_repetitions) {
   set.seed(l+11*1000)
-  X1 = t(t(2*matrix(rnorm(n1*p), n1, p) %*% chol(Sigma))+ center1)
-  X0 = t(t(2*matrix(rnorm(n0*p), n0, p) %*% chol(Sigma))+ center0) 
+  X1 = t(t(matrix(rnorm(n1*p), n1, p) %*% chol(Sigma))+ center1)
+  X0 = t(t(matrix(rnorm(n0*p), n0, p) %*% chol(Sigma))+ center0) 
   X = rbind(X1, X0)
   
   result_norm_PCI_km_homo[l] <- PCI_km(X, p1, K=4)
@@ -395,106 +395,226 @@ all_results <- list(
   )
 )
 
-# 生成所有图的函数
-create_histogram <- function(values, title, mean_val, sd_val) {
-  df <- data.frame(values = values)
-  ggplot(df, aes(x = values)) +
+# 创建一个函数来生成图
+create_plot <- function(data_homo, data_hetero, top_title, right_title, filename, has_si = TRUE, show_top_title = TRUE, show_right_title = TRUE, 
+                         show_facet_row_title = TRUE, show_facet_col_title_top = TRUE, show_facet_col_title_bottom = FALSE) {
+  # 确定方法列表
+  if (has_si) {
+    methods <- c("PCI", "CTT", "SI", "DT")
+    method_values_homo <- c(data_homo$PCI_km, data_homo$CTT_km, data_homo$SI_km, data_homo$DT_km)
+    method_values_hetero <- c(data_hetero$PCI_km, data_hetero$CTT_km, data_hetero$SI_km, data_hetero$DT_km)
+  } else {
+    methods <- c("PCI", "CTT", "DT")
+    method_values_homo <- c(data_homo$PCI_km, data_homo$CTT_km, data_homo$DT_km)
+    method_values_hetero <- c(data_hetero$PCI_km, data_hetero$CTT_km, data_hetero$DT_km)
+  }
+  
+  # 创建Homo数据框
+  homo_data <- data.frame(
+    value = method_values_homo,
+    method = rep(methods, each = length(data_homo$PCI_km)),
+    condition = "Homo"
+  )
+  
+  # 创建Hetero数据框
+  hetero_data <- data.frame(
+    value = method_values_hetero,
+    method = rep(methods, each = length(data_hetero$PCI_km)),
+    condition = "Hetero"
+  )
+  
+  # 生成正态曲线数据
+  generate_curves <- function(data) {
+    curves <- data.frame()
+    for (i in seq_along(unique(data$method))) {
+      method_name <- unique(data$method)[i]
+      data_subset <- data[data$method == method_name, ]
+      
+    mean_val <- 0
+    sd_val <- 1
+    
+    x_seq <- seq(min(data_subset$value), max(data_subset$value), length.out = 100)
+    y_seq <- dnorm(x_seq, mean = mean_val, sd = sd_val)
+    
+      curves <- rbind(curves, data.frame(
+      value = x_seq,
+      density = y_seq,
+      method = method_name,
+        condition = data$condition[1]
+      ))
+    }
+    return(curves)
+  }
+  
+  homo_normal_curves <- generate_curves(homo_data)
+  hetero_normal_curves <- generate_curves(hetero_data)
+  
+  # 创建Homo图 - 根据参数控制标题显示
+  homo_theme <- theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 11),
+    axis.text.y = element_text(size = 11),
+    axis.ticks = element_line(size = 0.5),
+    strip.text = element_text(size = 12, face = "bold"),
+    strip.background = element_rect(fill = "gray80", color = "black", linewidth = 0.8),
+    strip.placement = "outside",
+    panel.spacing = unit(0.5, "cm"),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1.0),
+    panel.grid.major = element_line(color = "gray70", linewidth = 0.5),
+      panel.grid.minor = element_line(color = "gray85", linewidth = 0.3)
+    )
+  
+  # 根据参数设置标题
+  if (!show_facet_col_title_top) {
+    homo_theme <- homo_theme + theme(strip.text.x = element_blank())
+  }
+  if (!show_facet_row_title) {
+    homo_theme <- homo_theme + theme(strip.text.y = element_blank())
+  }
+  
+  homo_plot <- ggplot(homo_data, aes(x = value)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 20, 
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +
+    geom_line(data = homo_normal_curves, aes(y = density), color = "blue", 
+            linetype = "dashed", size = 1) +
+  labs(x = "", y = "") +
+    homo_theme +
+    facet_grid(condition ~ method, scales = "free_x")
+  
+  # 创建Hetero图 - 根据参数控制标题显示
+  hetero_theme <- theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 11),
+    axis.text.y = element_text(size = 11),
+    axis.ticks = element_line(size = 0.5),
+      strip.text = element_text(size = 12, face = "bold"),
+    strip.background = element_rect(fill = "gray80", color = "black", linewidth = 0.8),
+    strip.placement = "outside",
+    panel.spacing = unit(0.5, "cm"),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1.0),
+    panel.grid.major = element_line(color = "gray70", linewidth = 0.5),
+    panel.grid.minor = element_line(color = "gray85", linewidth = 0.3)
+    )
+  
+  # 根据参数设置标题
+  if (!show_facet_col_title_bottom) {
+    hetero_theme <- hetero_theme + theme(strip.text.x = element_blank())
+  }
+  if (!show_facet_row_title) {
+    hetero_theme <- hetero_theme + theme(strip.text.y = element_blank())
+  }
+  
+  hetero_plot <- ggplot(hetero_data, aes(x = value)) +
     geom_histogram(aes(y = after_stat(density)), bins = 20, 
                    fill = "lightblue", color = "black", alpha = 0.7) +
     geom_density(color = "red", size = 1) +
-    stat_function(fun = dnorm, 
-                  args = list(mean = mean_val, sd = sd_val),
-                  color = "blue", linetype = "dashed", size = 1) +
-    labs(title = title, x = "Value", y = "Density") +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5, size = 8))
-}
-
-# 创建4行8列的图
-# 行1: 正态分布, 异方差(hetero, σ(3,1)), 左边4列K-means (PCI, CTT, SI, DT), 右边3列层次聚类 (PCI, CTT, DT), 中间空1列
-# 行2: 正态分布, 同方差(homo, σ(1,1)), 左边4列K-means, 右边3列层次聚类, 中间空1列
-# 行3: t分布, 异方差(hetero, σ(3,1)), 左边4列K-means, 右边3列层次聚类, 中间空1列
-# 行4: t分布, 同方差(homo, σ(1,1)), 左边4列K-means, 右边3列层次聚类, 中间空1列
-
-plot_list <- list()
-
-# 第1行：正态分布异方差(hetero, σ(3,1))
-plot_list[[1]] <- create_histogram(all_results$norm_hetero$PCI_km, "Normal Hetero PCI-Km", 
-                                    mean(all_results$norm_hetero$PCI_km), sd(all_results$norm_hetero$PCI_km))
-plot_list[[2]] <- create_histogram(all_results$norm_hetero$CTT_km, "Normal Hetero CTT-Km", 
-                                    mean(all_results$norm_hetero$CTT_km), sd(all_results$norm_hetero$CTT_km))
-plot_list[[3]] <- create_histogram(all_results$norm_hetero$SI_km, "Normal Hetero SI-Km", 
-                                    mean(all_results$norm_hetero$SI_km), sd(all_results$norm_hetero$SI_km))
-plot_list[[4]] <- create_histogram(all_results$norm_hetero$DT_km, "Normal Hetero DT-Km", 
-                                    mean(all_results$norm_hetero$DT_km), sd(all_results$norm_hetero$DT_km))
-plot_list[[5]] <- ggplot() + theme_void()
-plot_list[[6]] <- create_histogram(all_results$norm_hetero$PCI_h, "Normal Hetero PCI-H", 
-                                    mean(all_results$norm_hetero$PCI_h), sd(all_results$norm_hetero$PCI_h))
-plot_list[[7]] <- create_histogram(all_results$norm_hetero$CTT_h, "Normal Hetero CTT-H", 
-                                    mean(all_results$norm_hetero$CTT_h), sd(all_results$norm_hetero$CTT_h))
-plot_list[[8]] <- create_histogram(all_results$norm_hetero$DT_h, "Normal Hetero DT-H", 
-                                    mean(all_results$norm_hetero$DT_h), sd(all_results$norm_hetero$DT_h))
-
-# 第2行：正态分布同方差(homo, σ(1,1))
-plot_list[[9]] <- create_histogram(all_results$norm_homo$PCI_km, "Normal Homo PCI-Km", 
-                                    mean(all_results$norm_homo$PCI_km), sd(all_results$norm_homo$PCI_km))
-plot_list[[10]] <- create_histogram(all_results$norm_homo$CTT_km, "Normal Homo CTT-Km", 
-                                    mean(all_results$norm_homo$CTT_km), sd(all_results$norm_homo$CTT_km))
-plot_list[[11]] <- create_histogram(all_results$norm_homo$SI_km, "Normal Homo SI-Km", 
-                                    mean(all_results$norm_homo$SI_km), sd(all_results$norm_homo$SI_km))
-plot_list[[12]] <- create_histogram(all_results$norm_homo$DT_km, "Normal Homo DT-Km", 
-                                    mean(all_results$norm_homo$DT_km), sd(all_results$norm_homo$DT_km))
-plot_list[[13]] <- ggplot() + theme_void()
-plot_list[[14]] <- create_histogram(all_results$norm_homo$PCI_h, "Normal Homo PCI-H", 
-                                    mean(all_results$norm_homo$PCI_h), sd(all_results$norm_homo$PCI_h))
-plot_list[[15]] <- create_histogram(all_results$norm_homo$CTT_h, "Normal Homo CTT-H", 
-                                    mean(all_results$norm_homo$CTT_h), sd(all_results$norm_homo$CTT_h))
-plot_list[[16]] <- create_histogram(all_results$norm_homo$DT_h, "Normal Homo DT-H", 
-                                    mean(all_results$norm_homo$DT_h), sd(all_results$norm_homo$DT_h))
-
-# 第3行：t分布异方差(hetero, σ(3,1))
-plot_list[[17]] <- create_histogram(all_results$t_hetero$PCI_km, "t Hetero PCI-Km", 
-                                     mean(all_results$t_hetero$PCI_km), sd(all_results$t_hetero$PCI_km))
-plot_list[[18]] <- create_histogram(all_results$t_hetero$CTT_km, "t Hetero CTT-Km", 
-                                     mean(all_results$t_hetero$CTT_km), sd(all_results$t_hetero$CTT_km))
-plot_list[[19]] <- create_histogram(all_results$t_hetero$SI_km, "t Hetero SI-Km", 
-                                     mean(all_results$t_hetero$SI_km), sd(all_results$t_hetero$SI_km))
-plot_list[[20]] <- create_histogram(all_results$t_hetero$DT_km, "t Hetero DT-Km", 
-                                     mean(all_results$t_hetero$DT_km), sd(all_results$t_hetero$DT_km))
-plot_list[[21]] <- ggplot() + theme_void()
-plot_list[[22]] <- create_histogram(all_results$t_hetero$PCI_h, "t Hetero PCI-H", 
-                                     mean(all_results$t_hetero$PCI_h), sd(all_results$t_hetero$PCI_h))
-plot_list[[23]] <- create_histogram(all_results$t_hetero$CTT_h, "t Hetero CTT-H", 
-                                     mean(all_results$t_hetero$CTT_h), sd(all_results$t_hetero$CTT_h))
-plot_list[[24]] <- create_histogram(all_results$t_hetero$DT_h, "t Hetero DT-H", 
-                                     mean(all_results$t_hetero$DT_h), sd(all_results$t_hetero$DT_h))
-
-# 第4行：t分布同方差(homo, σ(1,1))
-plot_list[[25]] <- create_histogram(all_results$t_homo$PCI_km, "t Homo PCI-Km", 
-                                     mean(all_results$t_homo$PCI_km), sd(all_results$t_homo$PCI_km))
-plot_list[[26]] <- create_histogram(all_results$t_homo$CTT_km, "t Homo CTT-Km", 
-                                     mean(all_results$t_homo$CTT_km), sd(all_results$t_homo$CTT_km))
-plot_list[[27]] <- create_histogram(all_results$t_homo$SI_km, "t Homo SI-Km", 
-                                     mean(all_results$t_homo$SI_km), sd(all_results$t_homo$SI_km))
-plot_list[[28]] <- create_histogram(all_results$t_homo$DT_km, "t Homo DT-Km", 
-                                     mean(all_results$t_homo$DT_km), sd(all_results$t_homo$DT_km))
-plot_list[[29]] <- ggplot() + theme_void()
-plot_list[[30]] <- create_histogram(all_results$t_homo$PCI_h, "t Homo PCI-H", 
-                                     mean(all_results$t_homo$PCI_h), sd(all_results$t_homo$PCI_h))
-plot_list[[31]] <- create_histogram(all_results$t_homo$CTT_h, "t Homo CTT-H", 
-                                     mean(all_results$t_homo$CTT_h), sd(all_results$t_homo$CTT_h))
-plot_list[[32]] <- create_histogram(all_results$t_homo$DT_h, "t Homo DT-H", 
-                                     mean(all_results$t_homo$DT_h), sd(all_results$t_homo$DT_h))
-
-# 组合所有图
+    geom_line(data = hetero_normal_curves, aes(y = density), color = "blue", 
+              linetype = "dashed", size = 1) +
+    labs(x = "", y = "") +
+    hetero_theme +
+    facet_grid(condition ~ method, scales = "free_x")
+  
+  # 拼接两个图
 combined_plot <- grid.arrange(
-  plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_list[[4]], plot_list[[5]], plot_list[[6]], plot_list[[7]], plot_list[[8]],
-  plot_list[[9]], plot_list[[10]], plot_list[[11]], plot_list[[12]], plot_list[[13]], plot_list[[14]], plot_list[[15]], plot_list[[16]],
-  plot_list[[17]], plot_list[[18]], plot_list[[19]], plot_list[[20]], plot_list[[21]], plot_list[[22]], plot_list[[23]], plot_list[[24]],
-  plot_list[[25]], plot_list[[26]], plot_list[[27]], plot_list[[28]], plot_list[[29]], plot_list[[30]], plot_list[[31]], plot_list[[32]],
-  ncol = 8, nrow = 4
+    homo_plot,
+    hetero_plot,
+  nrow = 2,
+  heights = c(1, 1)
 )
 
-ggsave("combined_distribution_comparison.png", combined_plot, width = 20, height = 12, dpi = 300)
-cat("图形已保存为 combined_distribution_comparison.png\n")
+  # 根据参数决定是否添加标题
+  if (show_top_title && show_right_title) {
+    # 两个标题都要
+    title_top <- grid::textGrob(top_title, gp = grid::gpar(fontsize = 16, fontface = "bold"))
+    title_right <- grid::textGrob(right_title, rot = 270, gp = grid::gpar(fontsize = 16, fontface = "bold"))
+final_plot <- grid.arrange(
+  title_top,
+  grid.arrange(combined_plot, title_right, ncol = 2, widths = c(20, 1)),
+  nrow = 2,
+  heights = c(0.5, 10)
+    )
+  } else if (show_top_title && !show_right_title) {
+    # 只要顶部标题
+    title_top <- grid::textGrob(top_title, gp = grid::gpar(fontsize = 16, fontface = "bold"))
+    final_plot <- grid.arrange(
+      title_top,
+      combined_plot,
+      nrow = 2,
+      heights = c(0.5, 10)
+    )
+  } else if (!show_top_title && show_right_title) {
+    # 只要右侧标题
+    title_right <- grid::textGrob(right_title, rot = 270, gp = grid::gpar(fontsize = 16, fontface = "bold"))
+    final_plot <- grid.arrange(
+      combined_plot, title_right, ncol = 2, widths = c(20, 1)
+    )
+  } else {
+    # 都不要
+    final_plot <- combined_plot
+  }
+  
+  # 返回图形对象
+  return(final_plot)
+}
+
+# 生成4张图并保存到变量
+# 1. K-means + Normal - 只要顶部标题，不要右侧标题；不显示facet行标题
+p1 <- create_plot(all_results$norm_homo, all_results$norm_hetero, "K-means", "Normal", "km_normal.png", 
+            show_top_title = TRUE, show_right_title = FALSE, 
+            show_facet_row_title = FALSE, show_facet_col_title_top = TRUE, show_facet_col_title_bottom = FALSE)
+
+# 2. K-means + t分布 - 两个标题都不要；facet行标题和列标题都不显示
+p2 <- create_plot(all_results$t_homo, all_results$t_hetero, "K-means", "t-distribution", "km_t.png", 
+            show_top_title = FALSE, show_right_title = FALSE,
+            show_facet_row_title = FALSE, show_facet_col_title_top = FALSE, show_facet_col_title_bottom = FALSE)
+
+# 3. Hierarchical + Normal (只使用PCI, CTT, DT，没有SI) - 两个标题都要；facet行列标题都显示
+hierarchy_norm_homo <- list(
+  PCI_km = all_results$norm_homo$PCI_h, 
+  CTT_km = all_results$norm_homo$CTT_h, 
+  DT_km = all_results$norm_homo$DT_h
+)
+hierarchy_norm_hetero <- list(
+  PCI_km = all_results$norm_hetero$PCI_h, 
+  CTT_km = all_results$norm_hetero$CTT_h, 
+  DT_km = all_results$norm_hetero$DT_h
+)
+p3 <- create_plot(hierarchy_norm_homo, hierarchy_norm_hetero, "Hierarchical", "Normal", "h_normal.png", 
+            has_si = FALSE, show_top_title = TRUE, show_right_title = TRUE,
+            show_facet_row_title = TRUE, show_facet_col_title_top = TRUE, show_facet_col_title_bottom = FALSE)
+
+# 4. Hierarchical + t分布 - 只要右侧标题；facet列标题不显示
+hierarchy_t_homo <- list(
+  PCI_km = all_results$t_homo$PCI_h, 
+  CTT_km = all_results$t_homo$CTT_h, 
+  DT_km = all_results$t_homo$DT_h
+)
+hierarchy_t_hetero <- list(
+  PCI_km = all_results$t_hetero$PCI_h, 
+  CTT_km = all_results$t_hetero$CTT_h, 
+  DT_km = all_results$t_hetero$DT_h
+)
+p4 <- create_plot(hierarchy_t_homo, hierarchy_t_hetero, "Hierarchical", "t-distribution", "h_t.png", 
+            has_si = FALSE, show_top_title = FALSE, show_right_title = TRUE,
+            show_facet_row_title = TRUE, show_facet_col_title_top = FALSE, show_facet_col_title_bottom = FALSE)
+
+# 创建空白间隔
+blank_v <- grid::rectGrob(gp = grid::gpar(col = "white", fill = "white"))  # 垂直间隔
+blank_h <- grid::rectGrob(gp = grid::gpar(col = "white", fill = "white"))  # 水平间隔
+
+# 拼接四张图，添加间隔
+final_arrangement <- grid.arrange(
+  p1, blank_v, p3,  # 第一行：Normal (K-means, 空白, Hierarchical)
+  blank_h, blank_h, blank_h,  # 行间隔
+  p2, blank_v, p4,  # 第二行：t-distribution (K-means, 空白, Hierarchical)
+  ncol = 3,
+  nrow = 3,
+  heights = c(1, 0, 1),  # 中间行高度较小作为间隔
+  widths = c(4, 0.3, 3)   # 中间列宽度较小作为间隔
+)
+
+# 保存最终图
+ggsave("combined_4_panels.png", final_arrangement, width = 20, height = 14, dpi = 300)
+cat("最终拼接图已保存为 combined_4_panels.png\n")
 
