@@ -190,10 +190,10 @@ PCI_h <- function(X, p1, K = 2){
 }
 
 # 参数设置
-p1 = 80; p = 400; n = 800; mu_1 = 0; mu_2 = 3; rho = 0.2
+p1 = 80; p = 400; n = 800; mu_1 = 0; mu_2 = 4; rho = 0.2; ran=76
 
 # 两种方差配置
-sigma_1_config1 = 2; sigma_2_config1 = 1  # 配置1：方差(3,1)
+sigma_1_config1 = 3; sigma_2_config1 = 1  # 配置1：方差(3,1)
 sigma_1_config2 = 1; sigma_2_config2 = 1  # 配置2：方差(1,1)
 
 n_repetitions <- 100
@@ -240,7 +240,7 @@ result_norm_CTT_h_hetero <- numeric(n_repetitions)
 result_norm_DT_h_hetero <- numeric(n_repetitions)
 
 for(l in 1:n_repetitions) {
-  set.seed(l+35*1000)
+  set.seed(l+ran*9781)
   X1 = t(t(matrix(rnorm(n1*p), n1, p) %*% chol(Sigma))+ center1)
   X0 = t(t(matrix(rnorm(n0*p), n0, p) %*% chol(Sigma))+ center0) 
   X = rbind(X1, X0)
@@ -257,7 +257,7 @@ for(l in 1:n_repetitions) {
 
 # t分布异方差
 cat("计算t分布异方差...\n")
-df_t = 8
+df_t = 7
 result_t_PCI_km_hetero <- numeric(n_repetitions)
 result_t_CTT_km_hetero <- numeric(n_repetitions)
 result_t_SI_km_hetero <- numeric(n_repetitions)
@@ -267,7 +267,7 @@ result_t_CTT_h_hetero <- numeric(n_repetitions)
 result_t_DT_h_hetero <- numeric(n_repetitions)
 
 for(l in 1:n_repetitions) {
-  set.seed(l+35*2000)
+  set.seed(l+ran*2579)
   Sigma_sqrt <- chol(Sigma)
   X1 = matrix(rt(n1*p, df = df_t), n1, p)
   X0 = matrix(rt(n0*p, df = df_t), n0, p)
@@ -309,7 +309,7 @@ result_norm_CTT_h_homo <- numeric(n_repetitions)
 result_norm_DT_h_homo <- numeric(n_repetitions)
 
 for(l in 1:n_repetitions) {
-  set.seed(l+11*1000)
+  set.seed(l+ran*5000)
   X1 = t(t(matrix(rnorm(n1*p), n1, p) %*% chol(Sigma))+ center1)
   X0 = t(t(matrix(rnorm(n0*p), n0, p) %*% chol(Sigma))+ center0) 
   X = rbind(X1, X0)
@@ -335,7 +335,7 @@ result_t_CTT_h_homo <- numeric(n_repetitions)
 result_t_DT_h_homo <- numeric(n_repetitions)
 
 for(l in 1:n_repetitions) {
-  set.seed(l+11*2000)
+  set.seed(l+ran*8000)
   Sigma_sqrt <- chol(Sigma)
   X1 = matrix(rt(n1*p, df = df_t), n1, p)
   X0 = matrix(rt(n0*p, df = df_t), n0, p)
@@ -409,19 +409,21 @@ create_plot <- function(data_homo, data_hetero, top_title, right_title, filename
     method_values_hetero <- c(data_hetero$PCI_km, data_hetero$CTT_km, data_hetero$DT_km)
   }
   
-  # 创建Homo数据框
+  # 创建Homo数据框，指定方法顺序为PCI、CTT、DT、SI
   homo_data <- data.frame(
     value = method_values_homo,
     method = rep(methods, each = length(data_homo$PCI_km)),
     condition = "Homo"
   )
+  homo_data$method <- factor(homo_data$method, levels = methods)
   
-  # 创建Hetero数据框
+  # 创建Hetero数据框，指定方法顺序为PCI、CTT、DT、SI
   hetero_data <- data.frame(
     value = method_values_hetero,
     method = rep(methods, each = length(data_hetero$PCI_km)),
     condition = "Hetero"
   )
+  hetero_data$method <- factor(hetero_data$method, levels = methods)
   
   # 生成正态曲线数据
   generate_curves <- function(data) {
@@ -452,8 +454,8 @@ create_plot <- function(data_homo, data_hetero, top_title, right_title, filename
   # 创建Homo图 - 根据参数控制标题显示
   homo_theme <- theme_minimal() +
   theme(
-    axis.text.x = element_text(size = 11),
-    axis.text.y = element_text(size = 11),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 15),
     axis.ticks = element_line(size = 0.5),
     strip.text = element_text(size = 12, face = "bold"),
     strip.background = element_rect(fill = "gray80", color = "black", linewidth = 0.8),
@@ -485,8 +487,8 @@ create_plot <- function(data_homo, data_hetero, top_title, right_title, filename
   # 创建Hetero图 - 根据参数控制标题显示
   hetero_theme <- theme_minimal() +
   theme(
-    axis.text.x = element_text(size = 11),
-    axis.text.y = element_text(size = 11),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 15),
     axis.ticks = element_line(size = 0.5),
       strip.text = element_text(size = 12, face = "bold"),
     strip.background = element_rect(fill = "gray80", color = "black", linewidth = 0.8),
@@ -611,7 +613,7 @@ final_arrangement <- grid.arrange(
   ncol = 3,
   nrow = 3,
   heights = c(1, 0, 1),  # 中间行高度较小作为间隔
-  widths = c(4, 0.3, 3)   # 中间列宽度较小作为间隔
+  widths = c(4, 0.3, 3.2)   # 中间列宽度较小作为间隔
 )
 
 # 保存最终图
