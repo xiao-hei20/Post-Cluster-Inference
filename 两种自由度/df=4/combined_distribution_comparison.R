@@ -190,13 +190,13 @@ PCI_h <- function(X, p1, K = 2){
 }
 
 # 参数设置
-p1 = 80; p = 400; n = 800; mu_1 = 0; mu_2 = 4; rho = 0.2; ran=76
+p1 = 80; p = 400; n = 800; mu_1 = 0; mu_2 = 4; rho = 0.2; ran=89
 
 # 两种方差配置
 sigma_1_config1 = 3; sigma_2_config1 = 1  # 配置1：方差(3,1)
 sigma_1_config2 = 1; sigma_2_config2 = 1  # 配置2：方差(1,1)
 
-n_repetitions <- 100
+n_repetitions <- 500
 
 # 存储所有结果 - 使用命名列表
 all_results <- list(
@@ -257,7 +257,7 @@ for(l in 1:n_repetitions) {
 
 # t分布异方差
 cat("计算t分布异方差...\n")
-df_t = 7
+df_t = 4
 result_t_PCI_km_hetero <- numeric(n_repetitions)
 result_t_CTT_km_hetero <- numeric(n_repetitions)
 result_t_SI_km_hetero <- numeric(n_repetitions)
